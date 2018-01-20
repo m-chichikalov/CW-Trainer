@@ -8,8 +8,14 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
 
-public class main extends AppCompatActivity {
+public class main extends AppCompatActivity implements View.OnClickListener{
+
+    Button btStart, btPause, btFeed;
+
+    CwPlayer cw;
+    CwPlayer cw2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +32,17 @@ public class main extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+
+        cw = new CwPlayer(18, 840.0);
+        cw2 = new CwPlayer(30, 640.0);
+
+        btPause = findViewById(R.id.button_pause);
+        btPause.setOnClickListener(this);
+        btStart = findViewById(R.id.button_start);
+        btStart.setOnClickListener(this);
+        btFeed = findViewById(R.id.button_feed);
+        btFeed.setOnClickListener(this);
+
     }
 
     @Override
@@ -49,4 +66,33 @@ public class main extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.button_start: {
+                cw.test();
+                cw2.test();
+                break;
+            }
+            case R.id.button_pause: {
+                cw.pause();
+                break;
+            }
+            case R.id.button_feed: {
+                cw2.play();
+                cw2.feed((byte) 32);
+
+                for (int i = 65; i < 91; i++) {
+                    cw2.feed((byte) i);
+                }
+                break;
+            }
+        }
+    }
 }
+
+
+
+
