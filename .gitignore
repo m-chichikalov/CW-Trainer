@@ -53,3 +53,8 @@ google-services.json
 freeline.py
 freeline/
 freeline_project_description.json
+
+
+# should check...
+.idea
+app/build
