@@ -3,6 +3,7 @@ package pro.mbed.cwtrainer;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.media.audiofx.Equalizer;
 import android.util.Log;
 
 import java.util.LinkedList;
@@ -91,6 +92,29 @@ public class CwPlayer {
                 sampleRate, AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT, (4 * numSamples),
                 AudioTrack.MODE_STREAM);
+
+        Equalizer equalizer = new Equalizer( 0, audioTrack.getAudioSessionId());
+
+        short numberBands = equalizer.getNumberOfBands();
+        short lowerLevel  = equalizer.getBandLevelRange()[0];
+        short upperLevel  = equalizer.getBandLevelRange()[1];
+
+        equalizer.setBandLevel((short)0, (short) 1500);
+        equalizer.setBandLevel((short)1, (short) 1500);
+        equalizer.setBandLevel((short)2, (short) 1500);
+        equalizer.setBandLevel((short)3, (short)-1500);
+        equalizer.setBandLevel((short)4, (short)-1500);
+
+        equalizer.setEnabled(true);
+
+        for (short i = 0; i < numberBands; i++) {
+            Log.d(TAG, "Band " + numberBands + " central frequency is " +
+                        equalizer.getCenterFreq(i));
+        }
+
+        audioTrack.attachAuxEffect(equalizer.getId());
+        audioTrack.setAuxEffectSendLevel(1.0f);
+
         rnd = new Random();
         
         genSinToneSamples();
@@ -102,29 +126,18 @@ public class CwPlayer {
         startThread();
     }
 
-    private byte[] addNoise (byte[] samplesArray) {
-        byte[] noise = new byte[samplesArray.length];
-        rnd.nextBytes(noise);
-        for (int i=0; i < samplesArray.length; i++){
-            if (hasNoise) {
-                noise[i] /= 32;
-                noise[i] += samplesArray[i];
-            } else {
-                noise[i] = samplesArray[i];
-            }
-        }
-        return noise;
-    }
-
     private void genSinToneSamples() {
         double[] sample = new double[period];
         for (int i = 0; i < period; ++i) {
-            sample[i] = 0.5 * Math.sin(2 * Math.PI * i / (sampleRate/freqOfTon));
+            sample[i] = Math.sin(2 * Math.PI * i / (sampleRate/freqOfTon));
         }
         int idx = 0;
         // convert to 16 bit pcm sound array
         for (double dVal : sample) {
-            samplePCM[idx++] = (short) (dVal * 32767);
+            short valShort = (short) (dVal * 32767);
+            if (valShort > 10000) { valShort = 10000;}
+            if (valShort < -10000) { valShort = -10000;}
+            samplePCM[idx++] = valShort;
         }
     }
 
@@ -132,7 +145,7 @@ public class CwPlayer {
         int idx = 0;
         for (int i = 0; i < numberOfPeriods; i++) {
             for (int j = 0; j < (period); j++) {
-                middleSnd[idx++] = (byte) (samplePCM[j] & 0x00ff);
+                middleSnd[idx++] = (byte)  (samplePCM[j] & 0x00ff);
                 middleSnd[idx++] = (byte) ((samplePCM[j] & 0xff00) >>> 8);
             }
         }
@@ -185,7 +198,9 @@ public class CwPlayer {
 
 
     public void pause() {
-        audioTrack.pause();
+//        if (audioTrack.getPlayState() == audioTrack.PLAYSTATE_PLAYING) {
+            audioTrack.pause();
+//        }
     }
 
     public void feed(byte charFeed) {
@@ -200,26 +215,24 @@ public class CwPlayer {
                     for (;;) {
                         if (!queue.isEmpty()) {
                             // remove character from Queue, decode and feed audio buffer.
-                            int undecodedCW = getUndecodedCW(queue.remove());
-                            int test = (0x00000003 & undecodedCW);
+                            int unDecodedCW = getUnDecodedCW(queue.remove());
+                            int test = (0x00000003 & unDecodedCW);
                             while (test != 0) {
                                 switch (test){
-                                    case 1: {
-                                        undecodedCW = (undecodedCW >> 2);
-                                        test = (0x00000003 & undecodedCW);
+                                    case 1:
+                                        unDecodedCW = (unDecodedCW >> 2);
+                                        test = (0x00000003 & unDecodedCW);
                                         playDot();
                                         playPauseBetweenDots();
                                         Log.d(TAG, "Dot   .");
                                         break;
-                                    }
-                                    case 3: {
-                                        undecodedCW = (undecodedCW >> 4);
-                                        test = (0x00000003 & undecodedCW);
+                                    case 3:
+                                        unDecodedCW = (unDecodedCW >> 4);
+                                        test = (0x00000003 & unDecodedCW);
                                         playDash();
                                         playPauseBetweenDots();
                                         Log.d(TAG, "Dash  -");
                                         break;
-                                    }
                                 }
                             }
                             playPauseBetweenWords();
@@ -231,7 +244,7 @@ public class CwPlayer {
         }).start();
     }
     
-    private int getUndecodedCW(byte ch) {
+    private int getUnDecodedCW(byte ch) {
         byte ch_ = ch;
         if (ch_ >= 97 && ch_ <=122) {
             ch_ = (byte) (ch_ - 32);
@@ -244,30 +257,30 @@ public class CwPlayer {
     }
 
     private void playDot (){
-        audioTrack.write(addNoise(frontSnd), 0, (numSamples * 2));
+        audioTrack.write(frontSnd, 0, (numSamples * 2));
         for (int i = 0; i < 3; i++) {
-            audioTrack.write(addNoise(middleSnd), 0, (numSamples * 2));
+            audioTrack.write(middleSnd, 0, (numSamples * 2));
         }
-        audioTrack.write(addNoise(endSnd), 0, (numSamples * 2));
+        audioTrack.write(endSnd, 0, (numSamples * 2));
     }
 
     private void playDash (){
-        audioTrack.write(addNoise(frontSnd), 0, (numSamples * 2));
+        audioTrack.write(frontSnd, 0, (numSamples * 2));
         for (int i = 0; i < 13; i++) {
-            audioTrack.write(addNoise(middleSnd), 0, (numSamples * 2));
+            audioTrack.write(middleSnd, 0, (numSamples * 2));
         }
-        audioTrack.write(addNoise(endSnd), 0, (numSamples * 2));
+        audioTrack.write(endSnd, 0, (numSamples * 2));
     }
 
     private void playPauseBetweenDots (){
         for (int i = 0; i < 5; i++) {
-            audioTrack.write(addNoise(silentSnd), 0, (numSamples * 2));
+            audioTrack.write(silentSnd, 0, (numSamples * 2));
         }
     }
 
     private void playPauseBetweenWords (){
         for (int i = 0; i < 30; i++) {
-            audioTrack.write(addNoise(silentSnd), 0, (numSamples * 2));
+            audioTrack.write(silentSnd, 0, (numSamples * 2));
         }
     }
 
@@ -279,42 +292,6 @@ public class CwPlayer {
                     audioTrack.play();
                     audioTrack.flush();
                     for (int j =0; j < 20; j ++) {
-
-
-                        audioTrack.write(addNoise(frontSnd), 0, (numSamples * 2));
-                        for (i = 0; i < 13; i++) {
-                            audioTrack.write(addNoise(middleSnd), 0, (numSamples * 2));
-                        }
-                        audioTrack.write(addNoise(endSnd), 0, (numSamples * 2));
-
-
-                        for (i = 0; i < 5; i++) {
-                            audioTrack.write(addNoise(silentSnd), 0, (numSamples * 2));
-                        }
-
-
-                        audioTrack.write(addNoise(frontSnd), 0, (numSamples * 2));
-                        for (i = 0; i < 3; i++) {
-                            audioTrack.write(addNoise(middleSnd), 0, (numSamples * 2));
-                        }
-                        audioTrack.write(addNoise(endSnd), 0, (numSamples * 2));
-
-
-                        for (i = 0; i < 5; i++) {
-                            audioTrack.write(addNoise(silentSnd), 0, (numSamples * 2));
-                        }
-
-
-                        audioTrack.write(addNoise(frontSnd), 0, (numSamples * 2));
-                        for (i = 0; i < 13; i++) {
-                            audioTrack.write(addNoise(middleSnd), 0, (numSamples * 2));
-                        }
-                        audioTrack.write(addNoise(endSnd), 0, (numSamples * 2));
-
-
-                        for (i = 0; i < 30; i++) {
-                            audioTrack.write(addNoise(silentSnd), 0, (numSamples * 2));
-                        }
 
                     }
                     audioTrack.stop();
