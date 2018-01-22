@@ -16,6 +16,7 @@ public class main extends AppCompatActivity implements View.OnClickListener{
 
     CwPlayer cw;
     CwPlayer cw2;
+    Noise noise;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +36,7 @@ public class main extends AppCompatActivity implements View.OnClickListener{
 
         cw = new CwPlayer(18, 840.0);
         cw2 = new CwPlayer(30, 640.0);
+        noise = new Noise();
 
         btPause = findViewById(R.id.button_pause);
         btPause.setOnClickListener(this);
@@ -77,19 +79,28 @@ public class main extends AppCompatActivity implements View.OnClickListener{
                 break;
             }
             case R.id.button_pause: {
-                cw.pause();
+//                cw2.pause();
+                noise.pause();
                 break;
             }
             case R.id.button_feed: {
+                noise.play();
                 cw2.play();
-                cw2.feed((byte) 32);
 
                 for (int i = 65; i < 91; i++) {
                     cw2.feed((byte) i);
                 }
+//                cw2.pause();
+//                noise.stop();
                 break;
             }
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        
     }
 }
 
