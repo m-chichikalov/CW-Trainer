@@ -33,7 +33,7 @@ import java.util.Random;
 
 public class CwPlayer {
 
-    private int[] tableCW = {
+    private final static int[] tableCW = {
             0x0000010, 0x0000000, 0x0045D5D, 0x0000000, // ' ', '!', '"', '#'
             0x00475D5, 0x0000000, 0x0000000, 0x045DDDD, // '$', '%', '&', "'"
             0x0045DD7, 0x0475DD7, 0x0000000, 0x001175D, // '(', ')', '*', '+'
@@ -52,14 +52,18 @@ public class CwPlayer {
 
     private static final String TAG = "CwPlayer.class"; // for logging
     private static final int sampleRate = 44100; //Hz
+    private static final int lengthPauseBetweenDots = 5;
+    private static final int lengthDot = 3;
 
-    private boolean hasNoise = false;
+
     private double lengthOfDot; // 60 millesecond -> 20 wpm
     private double freqOfTon; // Hz
+    private double dotDashRatio;  // should be between 3...5
 
     private int numSamples;
     private int period;
     private int numberOfPeriods;
+    private int lengthDash , lengthPauseBetweenWords, lengthPauseBetweenCharacters;
 
     private short samplePCM[];
     private byte  frontSnd[];
@@ -71,9 +75,14 @@ public class CwPlayer {
     Queue<Byte> queue;
     Random rnd;
 
-    public CwPlayer(int speedWPM, double freqOfTone) {
-        freqOfTon = freqOfTone;
-        lengthOfDot = 1200/speedWPM;
+    public CwPlayer(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {
+        this.dotDashRatio = dotDashRatio;
+        this.freqOfTon = freqOfTone;
+        this.lengthOfDot = 1200/speedWPM;
+        this.lengthDash = (int) ((5 * dotDashRatio) - 2);
+        this.lengthPauseBetweenWords = (int) (30 * lengthPause);
+        this.lengthPauseBetweenCharacters = (int) (15 * lengthPause);
+
         period = sampleRate / (int) freqOfTon;
         numSamples = (int) ((lengthOfDot / 5) * (sampleRate/ 1000));
 
@@ -99,7 +108,7 @@ public class CwPlayer {
         short lowerLevel  = equalizer.getBandLevelRange()[0];
         short upperLevel  = equalizer.getBandLevelRange()[1];
 
-        equalizer.setBandLevel((short)0, (short) 1500);
+        equalizer.setBandLevel((short)0, (short)-1500);
         equalizer.setBandLevel((short)1, (short) 1500);
         equalizer.setBandLevel((short)2, (short) 1500);
         equalizer.setBandLevel((short)3, (short)-1500);
@@ -207,6 +216,12 @@ public class CwPlayer {
         queue.add(charFeed);
     }
 
+    public void cleanBuffer() {
+        pause();
+        queue.clear();
+        play();
+    }
+
 
     private void startThread() {
         new Thread(new Runnable() {
@@ -217,26 +232,35 @@ public class CwPlayer {
                             // remove character from Queue, decode and feed audio buffer.
                             int unDecodedCW = getUnDecodedCW(queue.remove());
                             int test = (0x00000003 & unDecodedCW);
-                            while (test != 0) {
+                            do { // TODO refactor this DRY
                                 switch (test){
+                                    case 0:
+                                        playPause(lengthPauseBetweenWords);
+                                        break;
                                     case 1:
-                                        unDecodedCW = (unDecodedCW >> 2);
+                                        playDotOrDash (lengthDot);
+                                        unDecodedCW >>= 2;
                                         test = (0x00000003 & unDecodedCW);
-                                        playDot();
-                                        playPauseBetweenDots();
+                                        if (test == 0) {
+                                            playPause(lengthPauseBetweenCharacters);
+                                        } else {
+                                            playPause(lengthPauseBetweenDots);
+                                        }
                                         Log.d(TAG, "Dot   .");
                                         break;
                                     case 3:
-                                        unDecodedCW = (unDecodedCW >> 4);
+                                        playDotOrDash (lengthDash);
+                                        unDecodedCW >>= 4;
                                         test = (0x00000003 & unDecodedCW);
-                                        playDash();
-                                        playPauseBetweenDots();
+                                        if (test == 0) {
+                                            playPause(lengthPauseBetweenCharacters);
+                                        } else {
+                                            playPause(lengthPauseBetweenDots);
+                                        }
                                         Log.d(TAG, "Dash  -");
                                         break;
                                 }
-                            }
-                            playPauseBetweenWords();
-                            Log.d(TAG, "Pause  ");
+                            } while (test != 0);
                         }
                     }
                 } catch (Exception e) { }
@@ -245,60 +269,29 @@ public class CwPlayer {
     }
     
     private int getUnDecodedCW(byte ch) {
-        byte ch_ = ch;
-        if (ch_ >= 97 && ch_ <=122) {
-            ch_ = (byte) (ch_ - 32);
-        } else if (ch_ >= 32 && ch_ <= 90) {
-            Log.d(TAG, "Query int - " + tableCW[ch_ - 32] + "from table.");
-            return tableCW[ch_ - 32];
+        byte ch_ = 1;
+        if (ch >= 97 && ch <=122) {
+            ch_ = (byte) (ch - 64);
+        } else if (ch >= 32 && ch <= 90) {
+            Log.d(TAG, "Query int - " + tableCW[ch - 32] + "from table.");
+            ch_ = (byte) (ch - 32);
         }
         Log.d(TAG, "Error recognize the character.");
-        return 0;
+        return tableCW[ch_];
     }
 
-    private void playDot (){
+    private void playDotOrDash (int length){
         audioTrack.write(frontSnd, 0, (numSamples * 2));
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < length; i++) {
             audioTrack.write(middleSnd, 0, (numSamples * 2));
         }
         audioTrack.write(endSnd, 0, (numSamples * 2));
     }
 
-    private void playDash (){
-        audioTrack.write(frontSnd, 0, (numSamples * 2));
-        for (int i = 0; i < 13; i++) {
-            audioTrack.write(middleSnd, 0, (numSamples * 2));
-        }
-        audioTrack.write(endSnd, 0, (numSamples * 2));
-    }
-
-    private void playPauseBetweenDots (){
-        for (int i = 0; i < 5; i++) {
+    private void playPause (int pause){
+        for (int i = 0; i < pause; i++) {
             audioTrack.write(silentSnd, 0, (numSamples * 2));
         }
     }
-
-    private void playPauseBetweenWords (){
-        for (int i = 0; i < 30; i++) {
-            audioTrack.write(silentSnd, 0, (numSamples * 2));
-        }
-    }
-
-    public void test() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    int i;
-                    audioTrack.play();
-                    audioTrack.flush();
-                    for (int j =0; j < 20; j ++) {
-
-                    }
-                    audioTrack.stop();
-                } catch (Exception e) { }
-            }
-        }).start();
-    }
-
 
 }

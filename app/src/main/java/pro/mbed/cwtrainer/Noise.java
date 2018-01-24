@@ -17,13 +17,15 @@ public class Noise {
     private static final int numSamples = 150;
 
     private  byte[] noiseSnd = new byte [2 * numSamples];
-    private double volume = 1.0;
+    private double volume = 0.02;
+
     AudioTrack audioTrack;
     Random rnd;
     Thread noiseThread;
 
     public Noise () {
         rnd = new Random();
+
         audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
                 sampleRate, AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT, (2 * numSamples),
@@ -42,6 +44,7 @@ public class Noise {
                 }
             }
         });
+
         noiseThread.start();
 
     }
@@ -50,7 +53,7 @@ public class Noise {
     private void generateNoise () {
         int idx = 0;
         for (int i = 0; i < numSamples; i++) {
-            double dVal = rnd.nextDouble()/32;
+            double dVal = volume * rnd.nextDouble();
             short sample = (short) (dVal * 32767);
             noiseSnd[idx++] = (byte) (sample & 0x00ff);
             noiseSnd[idx++] = (byte) ((sample & 0xff00) >>> 8);
@@ -63,14 +66,17 @@ public class Noise {
     }
 
     public void pause() {
-//        if (noiseThread != null) {
-//            if (noiseThread.getState() == Thread.State.RUNNABLE) {
-//                noiseThread.interrupt();
-//            }
-//        }
         audioTrack.pause();
-        audioTrack.flush();
-//        audioTrack.release();
+    }
+
+    public void stop() {
+        if (noiseThread != null) {
+            if (noiseThread.isAlive()) {
+                noiseThread.interrupt();
+            }
+            audioTrack.release();
+            audioTrack = null;
+        }
     }
 
 }

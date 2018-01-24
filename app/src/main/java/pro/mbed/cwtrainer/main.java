@@ -1,27 +1,58 @@
 package pro.mbed.cwtrainer;
 
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.preference.Preference;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
+
+import java.nio.charset.StandardCharsets;
 
 public class main extends AppCompatActivity implements View.OnClickListener{
 
     Button btStart, btPause, btFeed;
+    EditText editText;
 
     CwPlayer cw;
-    CwPlayer cw2;
+//    CwPlayer cw2;
     Noise noise;
+
+    String TAG = "mainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        PreferenceManager.setDefaultValues(this, R.xml.pref_general, false);
+
+        editText = findViewById(R.id.edit_text);
+
+//            if (editText.requestFocus()) {
+//                InputMethodManager imm = (InputMethodManager)
+//                        getSystemService(Context.INPUT_METHOD_SERVICE);
+//                imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+//            }
+
+//        InputMethodManager imm =(InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+//        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -34,9 +65,14 @@ public class main extends AppCompatActivity implements View.OnClickListener{
             }
         });
 
-        cw = new CwPlayer(18, 840.0);
-        cw2 = new CwPlayer(30, 640.0);
+        cw = new CwPlayer(33, 640.0, 3.0, 3.0);
+//        cw2 = new CwPlayer(25, 640.0);
         noise = new Noise();
+
+        KochMethod km = new KochMethod();
+        editText.setText(km.getCharactersInLesson());
+        cw.play();
+        km.generateExercise(cw);
 
         btPause = findViewById(R.id.button_pause);
         btPause.setOnClickListener(this);
@@ -45,6 +81,36 @@ public class main extends AppCompatActivity implements View.OnClickListener{
         btFeed = findViewById(R.id.button_feed);
         btFeed.setOnClickListener(this);
 
+
+
+        editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if (charSequence.length() != 0) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    byte asciiCode = charSequence.toString().getBytes(StandardCharsets.US_ASCII)[i2-1];
+                    Log.d(TAG, "Letter - " + asciiCode);
+                    cw.feed(asciiCode);
+                    }
+                }
+            }
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        Log.d(TAG, "KeyEvent is - " + event );
+        Log.d(TAG, "keyCode is - " + keyCode );
+        return super.onKeyDown(keyCode, event);
     }
 
     @Override
@@ -63,44 +129,58 @@ public class main extends AppCompatActivity implements View.OnClickListener{
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent i = new Intent(this, SettingsActivity.class);
+            startActivity(i);
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    protected void onResume() {
+        noise.play();
+        super.onResume();
+    }
+
+
+    @Override
+    protected void onPause() {
+        noise.pause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        noise.stop();
+        super.onDestroy();
+    }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.button_start: {
                 cw.test();
-                cw2.test();
+
                 break;
             }
             case R.id.button_pause: {
 //                cw2.pause();
-                noise.pause();
+                cw.cleanBuffer();
                 break;
             }
             case R.id.button_feed: {
-                noise.play();
-                cw2.play();
+
+                cw.play();
 
                 for (int i = 65; i < 91; i++) {
-                    cw2.feed((byte) i);
+                    cw.feed((byte) i);
                 }
-//                cw2.pause();
-//                noise.stop();
+//                cw.pause();
+
                 break;
             }
         }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        
     }
 }
 
