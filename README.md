@@ -19,7 +19,7 @@ It might look like I am going to reinvent wheels, but as I said before, this is 
 Ok, first what should this class take as parameters on constractor. 
 - [x] Speed - as I know "PARIS" is frequently mentioned as the "standard word" for measuring translation speed. I also know that Speed (WPM) = 2.4 * (Dots per second). In code I am going use WPM - (speedWPM).
 - [x] Frequency of the tone  -  kind of straightforward. (freqOfTone)
-- [ ] Ratios. 
+- [x] Ratios. 
 Dash length | Dot length x 3
 Pause between elements | Dot length
 Pause between characters | Dot length x 3
@@ -27,6 +27,14 @@ Pause between words | Dot length x 7
 I want to be able change these ratios in settings.
 - [x] Boolean flag that during generation tone we need to add white noise to signal.
 
-Nothing else did not came to mind, I will add later...
+About CW timing. [link](http://www.arrl.org/files/file/Technology/x9004008.pdf) I break down a period of one dot into 5 units. So, one dash is going to exist 15 units.  
+![Cw timing](https://s8.hostingkartinok.com/uploads/images/2018/01/1a49706b6d6e6be634da66ce5a63979a.jpg)
 
+I am going to generate 4 arrays of PCM samples for audio track and later push these arrays into audio buffer sequencely. 
+
+Number 2 is base array, "pure" sine with choosen frequency, I used it to generate number 1 and 3 by applying Blackman Harris Step Response. Number 4 is just array of 0. 
+
+During that I fell into the trap. Dependently on the speed of Morse code and frequency of tone I could get terrible sound. After thinking over this, I figured it out that this happens because the length of array number 2 (in time domain) is not a multiple of period of frequency of tone. And sine looked like below.
+![](https://s8.hostingkartinok.com/uploads/images/2018/01/97166490d773681608b999ebb4eeb884.png)
+How I fixed this you can see in code.
 

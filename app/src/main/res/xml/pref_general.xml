@@ -1,40 +1,66 @@
 <PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="Enter your settings and hit Play button to listen to that.">
 
-    <CheckBoxPreference
-        android:title="Application updates"
-        android:defaultValue="true"
-        android:summary="This asdf as dla;sdfj alsdf asdlfk ajsdlf asdf ."
-        android:key="applicationUpdates" />
+        <ListPreference
+            android:defaultValue="@string/pref_lesson_default"
+            android:entries="@array/pref_lesson_titles"
+            android:entryValues="@array/pref_lesson_values"
+            android:key="@string/pref_lesson_key"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_lesson_title" />
 
-    <SwitchPreference
-        android:defaultValue="true"
-        android:key="example_switch"
-        android:summary="@string/pref_description_social_recommendations"
-        android:title="@string/pref_title_social_recommendations" />
+        <ListPreference
+            android:defaultValue="@string/pref_freq_default"
+            android:entries="@array/pref_freq_titles"
+            android:entryValues="@array/pref_freq_values"
+            android:key="@string/pref_freq_key"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_freq_title" />
 
-    <!-- NOTE: EditTextPreference accepts EditText attributes. -->
-    <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
-    <EditTextPreference
-        android:capitalize="words"
-        android:defaultValue="@string/pref_default_display_name"
-        android:inputType="textCapWords"
-        android:key="example_text"
-        android:maxLines="1"
-        android:selectAllOnFocus="true"
-        android:singleLine="true"
-        android:title="@string/pref_title_display_name" />
+        <EditTextPreference
+            android:capitalize="characters"
+            android:summary="@string/pref_wpm_default"
+            android:defaultValue="@string/pref_wpm_default"
+            android:inputType="numberDecimal"
+            android:key="@string/pref_wpm_key"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_wpm_title" />
 
-    <!-- NOTE: Hide buttons to simplify the UI. Users can touch outside the dialog to
-         dismiss it. -->
-    <!-- NOTE: ListPreference's summary should be set to its value by the activity code. -->
-    <ListPreference
-        android:defaultValue="-1"
-        android:entries="@array/pref_example_list_titles"
-        android:entryValues="@array/pref_example_list_values"
-        android:key="example_list"
-        android:negativeButtonText="@null"
-        android:positiveButtonText="@null"
-        android:title="@string/pref_title_add_friends_to_messages" />
+        <EditTextPreference
+            android:capitalize="characters"
+            android:defaultValue="@string/pref_call_default"
+            android:inputType="textCapCharacters"
+            android:key="@string/pref_call_key"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_call_title" />
 
+        <ListPreference
+            android:defaultValue="@string/pref_ratio_default"
+            android:entries="@array/pref_ratio_titles"
+            android:entryValues="@array/pref_ratio_values"
+            android:key="@string/pref_ratio_key"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_ratio_title" />
+
+        <EditTextPreference
+            android:capitalize="characters"
+            android:summary="@string/pref_pause_default"
+            android:defaultValue="@string/pref_pause_default"
+            android:inputType="numberDecimal"
+            android:key="@string/pref_pause_key"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_pause_title" />
+
+    </PreferenceCategory>
 </PreferenceScreen>

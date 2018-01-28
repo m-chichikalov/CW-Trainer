@@ -2,27 +2,18 @@ package pro.mbed.cwtrainer;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.Preference;
 import android.preference.PreferenceManager;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
-
-import java.nio.charset.StandardCharsets;
 
 public class main extends AppCompatActivity implements View.OnClickListener{
 
@@ -39,37 +30,23 @@ public class main extends AppCompatActivity implements View.OnClickListener{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        // set default value in settings
         PreferenceManager.setDefaultValues(this, R.xml.pref_general, false);
 
         editText = findViewById(R.id.edit_text);
 
-//            if (editText.requestFocus()) {
-//                InputMethodManager imm = (InputMethodManager)
-//                        getSystemService(Context.INPUT_METHOD_SERVICE);
-//                imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
-//            }
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        String defFrequency = getResources().getString(R.string.pref_freq_default);
+        Double frequency = Double.parseDouble(sharedPref.getString(getString(R.string.pref_freq_key), defFrequency));
 
-//        InputMethodManager imm =(InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-//        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-
-        cw = new CwPlayer(33, 640.0, 3.0, 3.0);
-//        cw2 = new CwPlayer(25, 640.0);
+        cw = new CwPlayer(33, frequency, 3.0, 3.0);
         noise = new Noise();
 
-        KochMethod km = new KochMethod();
+        KochMethod km = new KochMethod(this);
         editText.setText(km.getCharactersInLesson());
         cw.play();
         km.generateExercise(cw);
@@ -80,30 +57,6 @@ public class main extends AppCompatActivity implements View.OnClickListener{
         btStart.setOnClickListener(this);
         btFeed = findViewById(R.id.button_feed);
         btFeed.setOnClickListener(this);
-
-
-
-        editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if (charSequence.length() != 0) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    byte asciiCode = charSequence.toString().getBytes(StandardCharsets.US_ASCII)[i2-1];
-                    Log.d(TAG, "Letter - " + asciiCode);
-                    cw.feed(asciiCode);
-                    }
-                }
-            }
-            @Override
-            public void afterTextChanged(Editable editable) {
-
-            }
-        });
-
     }
 
     @Override
