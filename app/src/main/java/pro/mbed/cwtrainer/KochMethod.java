@@ -13,17 +13,21 @@ import java.util.Random;
  */
 
 public class KochMethod {
-
+    Context context;
     private int lesson;
     Random rnd;
+    char[][] exerciseArray;
 
     private String lessonsOrder = "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X";
 
-    public KochMethod () {
+    public KochMethod (Context context) {
+        this.context = context;
+
+        exerciseArray = new char[5][6]; //HARDCODE
         this.lesson = 4; // HARDCODE
         rnd = new Random();
 //        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
-//        lesson = sharedPref.getInt(asdfa afs df, 0);
+//        lesson = sharedPref.getInt(asdfa afs  df, 0);
 
     }
 
@@ -44,7 +48,7 @@ public class KochMethod {
         String characters = getCharactersInLesson();
         char[] charactersArray = characters.toCharArray();
 
-        char[][] exerciseArray = new char[5][6]; //HARDCODE
+//        char[][] exerciseArray = new char[5][6]; //HARDCODE
         for (int i=0; i < 5; i++) {
             for (int j=0; j < 5; j++) {
                 exerciseArray[i][j] = charactersArray[rnd.nextInt(lesson+1)];
@@ -53,6 +57,10 @@ public class KochMethod {
             exerciseArray[i][5] = ' ';
             cw.feed( (byte) ' ');
         }
+    }
+
+    public char[][] getExerciseArray() {
+        return exerciseArray;
     }
 
     /*

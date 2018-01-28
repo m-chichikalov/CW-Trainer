@@ -76,6 +76,21 @@ public class CwPlayer {
     Random rnd;
 
     public CwPlayer(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {
+
+        reInit(speedWPM, freqOfTone, dotDashRatio, lengthPause);
+
+        rnd = new Random();
+        queue = new LinkedList<>();
+        audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                sampleRate, AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT, (2 * numSamples),
+                AudioTrack.MODE_STREAM);
+
+        startThread();
+    }
+
+    public void reInit(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {
+
         this.dotDashRatio = dotDashRatio;
         this.freqOfTon = freqOfTone;
         this.lengthOfDot = 1200/speedWPM;
@@ -95,44 +110,11 @@ public class CwPlayer {
         endSnd    = new byte [2 * numSamples];
         silentSnd = new byte [2 * numSamples];
 
-        queue = new LinkedList<>();
-
-        audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
-                sampleRate, AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT, (4 * numSamples),
-                AudioTrack.MODE_STREAM);
-
-        Equalizer equalizer = new Equalizer( 0, audioTrack.getAudioSessionId());
-
-        short numberBands = equalizer.getNumberOfBands();
-        short lowerLevel  = equalizer.getBandLevelRange()[0];
-        short upperLevel  = equalizer.getBandLevelRange()[1];
-
-        equalizer.setBandLevel((short)0, (short)-1500);
-        equalizer.setBandLevel((short)1, (short) 1500);
-        equalizer.setBandLevel((short)2, (short) 1500);
-        equalizer.setBandLevel((short)3, (short)-1500);
-        equalizer.setBandLevel((short)4, (short)-1500);
-
-        equalizer.setEnabled(true);
-
-        for (short i = 0; i < numberBands; i++) {
-            Log.d(TAG, "Band " + numberBands + " central frequency is " +
-                        equalizer.getCenterFreq(i));
-        }
-
-        audioTrack.attachAuxEffect(equalizer.getId());
-        audioTrack.setAuxEffectSendLevel(1.0f);
-
-        rnd = new Random();
-        
         genSinToneSamples();
         generateFrontSnd();
         generateMiddleSnd();
         generateEndSnd();
         generateSilentSnd();
-
-        startThread();
     }
 
     private void genSinToneSamples() {
@@ -144,8 +126,8 @@ public class CwPlayer {
         // convert to 16 bit pcm sound array
         for (double dVal : sample) {
             short valShort = (short) (dVal * 32767);
-            if (valShort > 10000) { valShort = 10000;}
-            if (valShort < -10000) { valShort = -10000;}
+//            if (valShort > 10000) { valShort = 10000;}
+//            if (valShort < -10000) { valShort = -10000;}
             samplePCM[idx++] = valShort;
         }
     }
@@ -212,14 +194,32 @@ public class CwPlayer {
 //        }
     }
 
+    public void close() {
+        //TODO close  - release resources
+    }
+
     public void feed(byte charFeed) {
         queue.add(charFeed);
     }
 
+    public void feed(String stringFeed) {
+        // Todo implement
+        char[] charsFeed = stringFeed.toCharArray();
+        for (char chars: charsFeed) {
+            queue.add((byte) chars);
+        }
+    }
+
     public void cleanBuffer() {
-        pause();
+//        pause();
         queue.clear();
-        play();
+        audioTrack.flush();
+//        play();
+    }
+
+    public boolean isBufferEmpty() {
+        // TODO implement
+        return true;
     }
 
 
@@ -239,7 +239,7 @@ public class CwPlayer {
                                         break;
                                     case 1:
                                         playDotOrDash (lengthDot);
-                                        unDecodedCW >>= 2;
+                                        unDecodedCW >>>= 2;
                                         test = (0x00000003 & unDecodedCW);
                                         if (test == 0) {
                                             playPause(lengthPauseBetweenCharacters);
@@ -250,7 +250,8 @@ public class CwPlayer {
                                         break;
                                     case 3:
                                         playDotOrDash (lengthDash);
-                                        unDecodedCW >>= 4;
+//                                        unDecodedCW = choosePause(unDecodedCW, 4);
+                                        unDecodedCW >>>= 4;
                                         test = (0x00000003 & unDecodedCW);
                                         if (test == 0) {
                                             playPause(lengthPauseBetweenCharacters);
@@ -267,7 +268,7 @@ public class CwPlayer {
             }
         }).start();
     }
-    
+
     private int getUnDecodedCW(byte ch) {
         byte ch_ = 1;
         if (ch >= 97 && ch <=122) {

@@ -2,76 +2,104 @@
     <string name="app_name">CwTrainer</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_settings">Settings</string>
+    <!--<string name="category_call_description"></string>-->
 
     <!-- Strings related to Settings -->
+    <string name="bt_play_description">Button play description.</string>
+    <string name="bt_play_summary">Button play summary.</string>
+    <string name="bt_play_text">Play sample</string>
+    <string name="bt_stop_text">Stop</string>
 
-    <!-- Example General settings -->
-    <string name="pref_header_general">General</string>
+    <string name="pref_call_default">RV9YW</string>
+    <string name="pref_call_title">Enter your call</string>
+    <string name="pref_call_key">call</string>
 
-    <string name="pref_title_social_recommendations">Enable social recommendations</string>
-    <string name="pref_description_social_recommendations">Recommendations for people to contact
-        based on your message history
-    </string>
+    <string name="pref_wpm_title">Speed is </string>
+    <string name="pref_wpm_default">27</string>
+    <string name="pref_wpm_key">27</string>
 
-    <string name="pref_title_display_name">Display name</string>
-    <string name="pref_default_display_name">John Smith</string>
-
-    <string name="pref_title_add_friends_to_messages">Add friends to messages</string>
-    <string-array name="pref_example_list_titles">
-        <item>Always</item>
-        <item>When possible</item>
-        <item>Never</item>
-    </string-array>
-    <string-array name="pref_example_list_values">
-        <item>1</item>
-        <item>0</item>
-        <item>-1</item>
-    </string-array>
-
-    <!-- Example settings for Data & Sync -->
-    <string name="pref_header_data_sync">Data &amp; sync</string>
-
-    <string name="pref_title_sync_frequency">Sync frequency</string>
-    <string-array name="pref_sync_frequency_titles">
-        <item>15 minutes</item>
-        <item>30 minutes</item>
-        <item>1 hour</item>
-        <item>3 hours</item>
-        <item>6 hours</item>
-        <item>Never</item>
-    </string-array>
-    <string-array name="pref_sync_frequency_values">
-        <item>15</item>
-        <item>30</item>
-        <item>60</item>
-        <item>180</item>
-        <item>360</item>
-        <item>-1</item>
+    <string name="pref_ratio_title">A dash is a period of </string>
+    <string name="pref_ratio_default">3.0</string>
+    <string name="pref_ratio_key">ratio</string>
+    <string-array name="pref_ratio_titles">
+        <item>3 dots</item>
+        <item>3.25 dots</item>
+        <item>3.5 dots</item>
+        <item>3.75 dots</item>
+        <item>4 dots</item>
+        <item>4.25 dots</item>
+        <item>4.5 dots</item>
     </string-array>
 
-    <string-array name="list_preference_entries">
-        <item>Entry 1</item>
-        <item>Entry 2</item>
-        <item>Entry 3</item>
+    <string-array name="pref_ratio_values">
+        <item>3.0</item>
+        <item>3.25</item>
+        <item>3.5</item>
+        <item>3.75</item>
+        <item>4.0</item>
+        <item>4.25</item>
+        <item>4.5</item>
     </string-array>
 
-    <string-array name="list_preference_entry_values">
+    <string name="pref_freq_title">A frequency of tone is </string>
+    <string name="pref_freq_default">550</string>
+    <string name="pref_freq_key">freq</string>
+    <string-array name="pref_freq_titles">
+        <item>500 Hz</item>
+        <item>550 Hz</item>
+        <item>600 Hz</item>
+        <item>650 Hz</item>
+        <item>700 Hz</item>
+        <item>750 Hz</item>
+        <item>800 Hz</item>
+        <item>850 Hz</item>
+        <item>900 Hz</item>
+    </string-array>
+
+    <string-array name="pref_freq_values">
+        <item>500</item>
+        <item>550</item>
+        <item>600</item>
+        <item>650</item>
+        <item>700</item>
+        <item>750</item>
+        <item>800</item>
+        <item>850</item>
+        <item>900</item>
+    </string-array>
+
+    <!--"KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X"-->
+    <string name="pref_lesson_title">Your lesson is </string>
+    <string name="pref_lesson_default">1</string>
+    <string name="pref_lesson_key">lesson</string>
+    <string-array name="pref_lesson_titles">
+        <item>1 lesson (K, M)</item>
+        <item>2 lesson (U)</item>
+        <item>3 lesson (R)</item>
+        <item>4 lesson (E)</item>
+        <item>5 lesson (S)</item>
+        <item>6 lesson (N)</item>
+        <item>7 lesson (A)</item>
+        <item>8 lesson (P)</item>
+        <item>9 lesson (T)</item>
+        <item>10 lesson (L)</item>
+    </string-array>
+
+    <string-array name="pref_lesson_values">
         <item>1</item>
         <item>2</item>
         <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
     </string-array>
 
-    <string-array name="multi_select_list_preference_default_value" />
+    <string name="pref_pause_title">Pause ????</string>
+    <string name="pref_pause_key">pause</string>
+    <string name="pref_pause_default">1</string>
 
-    <string name="pref_title_system_sync_settings">System sync settings</string>
-
-    <!-- Example settings for Notifications -->
-    <string name="pref_header_notifications">Notifications</string>
-
-    <string name="pref_title_new_message_notifications">New message notifications</string>
-
-    <string name="pref_title_ringtone">Ringtone</string>
-    <string name="pref_ringtone_silent">Silent</string>
-
-    <string name="pref_title_vibrate">Vibrate</string>
 </resources>
