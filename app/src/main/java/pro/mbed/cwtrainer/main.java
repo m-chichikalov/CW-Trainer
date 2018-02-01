@@ -1,28 +1,32 @@
 package pro.mbed.cwtrainer;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
+
+import java.util.HashMap;
 
 public class main extends AppCompatActivity implements View.OnClickListener{
 
     Button btStart, btPause, btFeed;
+    TextView lettersOfLesson;
     EditText editText;
-
-    CwPlayer cw;
-//    CwPlayer cw2;
-    Noise noise;
+    CwPlayer cw = null;
+    KochMethod km = null;
+    SharedPreferences sharedPref;
+    double frequency, ratio, pause;
+    int speed, lesson;
+//  Noise noise;
 
     String TAG = "mainActivity";
 
@@ -32,24 +36,31 @@ public class main extends AppCompatActivity implements View.OnClickListener{
         setContentView(R.layout.activity_main);
         // set default value in settings
         PreferenceManager.setDefaultValues(this, R.xml.pref_general, false);
+        sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+//      noise = new Noise();
 
-        editText = findViewById(R.id.edit_text);
+        HashMap<String, Object> savedValues =
+                (HashMap<String, Object>) this.getLastCustomNonConfigurationInstance();
+        updateLocalSettings();
 
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-        String defFrequency = getResources().getString(R.string.pref_freq_default);
-        Double frequency = Double.parseDouble(sharedPref.getString(getString(R.string.pref_freq_key), defFrequency));
+        if (savedValues == null) {
+            cw = new CwPlayer(speed, frequency, ratio, pause);
+            km = new KochMethod();
+            cw.play();
+        } else {
+            cw = (CwPlayer) savedValues.get("cw");
+            km = (KochMethod) savedValues.get("km");
+        }
 
+
+        editText        = findViewById(R.id.edit_text);
+        lettersOfLesson = findViewById(R.id.text_char_of_lesson);
+
+        lettersOfLesson.setText(km.getCharactersInLesson());
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        cw = new CwPlayer(33, frequency, 3.0, 3.0);
-        noise = new Noise();
-
-        KochMethod km = new KochMethod(this);
-        editText.setText(km.getCharactersInLesson());
-        cw.play();
-        km.generateExercise(cw);
 
         btPause = findViewById(R.id.button_pause);
         btPause.setOnClickListener(this);
@@ -60,81 +71,82 @@ public class main extends AppCompatActivity implements View.OnClickListener{
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Log.d(TAG, "KeyEvent is - " + event );
-        Log.d(TAG, "keyCode is - " + keyCode );
-        return super.onKeyDown(keyCode, event);
+    protected void onResume() {
+        super.onResume();
+        updateLocalSettings();
+        cw.reInit(speed, frequency, ratio, pause);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             Intent i = new Intent(this, SettingsActivity.class);
             startActivity(i);
             return true;
         }
-
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    protected void onResume() {
-        noise.play();
-        super.onResume();
-    }
-
-
-    @Override
-    protected void onPause() {
-        noise.pause();
-        super.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
-        noise.stop();
-        super.onDestroy();
     }
 
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.button_start: {
-
-
+                km.generateExercise(cw);
                 break;
             }
             case R.id.button_pause: {
-//                cw2.pause();
+//              cw2.pause();
                 cw.cleanBuffer();
                 break;
             }
             case R.id.button_feed: {
-
                 cw.play();
-
                 for (int i = 65; i < 91; i++) {
                     cw.feed((byte) i);
                 }
-//                cw.pause();
-
+//              cw.pause();
                 break;
             }
         }
     }
+
+    @Override
+    public Object onRetainCustomNonConfigurationInstance() {
+        HashMap<String, Object> savedValues = new HashMap<>();
+        savedValues.put("cw", cw);
+        savedValues.put("km", km);
+        return savedValues;
+    }
+
+    private void updateLocalSettings () {
+        String defFrequency = getResources().getString(R.string.pref_freq_default);
+        frequency = Double.parseDouble(sharedPref.getString(getString(R.string.pref_freq_key), defFrequency));
+
+        String defSpeed = getResources().getString(R.string.pref_wpm_default);
+        speed = Integer.parseInt(sharedPref
+                .getString(getString(R.string.pref_wpm_key), defSpeed));
+
+        String defLesson = getResources().getString(R.string.pref_lesson_default);
+        lesson = Integer.parseInt(sharedPref
+                .getString(getString(R.string.pref_lesson_key), defLesson));
+
+        String defRatio = getResources().getString(R.string.pref_ratio_default);
+        ratio = Double.parseDouble(sharedPref
+                .getString(getString(R.string.pref_ratio_key), defRatio));
+
+        String defPause = getResources().getString(R.string.pref_pause_default);
+        pause = Double.parseDouble(sharedPref
+                .getString(getString(R.string.pref_pause_key), defPause));
+    }
+
 }
 
 

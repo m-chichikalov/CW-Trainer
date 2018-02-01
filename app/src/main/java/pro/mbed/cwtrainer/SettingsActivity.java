@@ -18,7 +18,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
     CwPlayer cw;
     Button bt;
-//    Boolean free;
+//  Boolean free;
     EditTextPreference speed, call, pause;
     ListPreference ratio, frequency, lesson;
 
@@ -46,15 +46,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         Log.d(TAG, "SettingsActivity was created, hash: " + this.hashCode());
 
         cw = (CwPlayer) getLastNonConfigurationInstance();
-//      free = true;
-
 
         bt = new Button(this);
         bt.setText("Play");
-//      bt.setPadding(this.getResources().getDimensionPixelSize(R.dimen.play_sample_bt_padding_left),
-//                0,
-//                this.getResources().getDimensionPixelSize(R.dimen.play_sample_bt_padding_left), 0);
-
         bt.setOnClickListener( new View.OnClickListener() {
 
             @Override
@@ -88,9 +82,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         bindChangeListener(frequency);
         bindChangeListener(lesson);
         bindChangeListener(pause);
-
-
-
     }
 
     private void bindChangeListener (Preference pref) {

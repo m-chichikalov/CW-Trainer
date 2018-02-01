@@ -4,8 +4,12 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.audiofx.Equalizer;
+import android.os.Looper;
 import android.util.Log;
 
+import java.io.IOException;
+import java.io.PipedReader;
+import java.io.PipedWriter;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
@@ -55,6 +59,7 @@ public class CwPlayer {
     private static final int lengthPauseBetweenDots = 5;
     private static final int lengthDot = 3;
 
+    FeedBufferThread feedBufferThread;
 
     private double lengthOfDot; // 60 millesecond -> 20 wpm
     private double freqOfTon; // Hz
@@ -85,12 +90,10 @@ public class CwPlayer {
                 sampleRate, AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT, (2 * numSamples),
                 AudioTrack.MODE_STREAM);
-
         startThread();
     }
 
     public void reInit(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {
-
         this.dotDashRatio = dotDashRatio;
         this.freqOfTon = freqOfTone;
         this.lengthOfDot = 1200/speedWPM;
@@ -100,7 +103,6 @@ public class CwPlayer {
 
         period = sampleRate / (int) freqOfTon;
         numSamples = (int) ((lengthOfDot / 5) * (sampleRate/ 1000));
-
         numberOfPeriods = numSamples / period;
         numSamples = period * numberOfPeriods;
 
@@ -196,6 +198,8 @@ public class CwPlayer {
 
     public void close() {
         //TODO close  - release resources
+        cleanBuffer();
+        feedBufferThread.interrupt();
     }
 
     public void feed(byte charFeed) {
@@ -222,51 +226,58 @@ public class CwPlayer {
         return true;
     }
 
+    private class FeedBufferThread extends Thread {
+        @Override
+        public void run() {
+            try {
+                while (!isInterrupted()) {
+                    if (!queue.isEmpty()) {
+                            playCW();
+                        }
+                }
+            } catch ( Exception e) { e.printStackTrace(); }
+        }
+
+        private void playCW () {
+            // remove character from Queue, decode and feed audio buffer.
+            int unDecodedCW = getUnDecodedCW(queue.remove());
+            int test = (0x00000003 & unDecodedCW);
+            do { // TODO refactor this DRY
+                switch (test){
+                    case 0:
+                        playPause(lengthPauseBetweenWords);
+                        break;
+                    case 1:
+                        playDotOrDash (lengthDot);
+                        unDecodedCW >>>= 2;
+                        test = (0x00000003 & unDecodedCW);
+                        if (test == 0) {
+                            playPause(lengthPauseBetweenCharacters);
+                        } else {
+                            playPause(lengthPauseBetweenDots);
+                        }
+                        Log.d(TAG, "Dot   .");
+                        break;
+                    case 3:
+                        playDotOrDash (lengthDash);
+                        unDecodedCW >>>= 4;
+                        test = (0x00000003 & unDecodedCW);
+                        if (test == 0) {
+                            playPause(lengthPauseBetweenCharacters);
+                        } else {
+                            playPause(lengthPauseBetweenDots);
+                        }
+                        Log.d(TAG, "Dash  -");
+                        break;
+                }
+            } while (test != 0);
+        }
+    }
+
 
     private void startThread() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    for (;;) {
-                        if (!queue.isEmpty()) {
-                            // remove character from Queue, decode and feed audio buffer.
-                            int unDecodedCW = getUnDecodedCW(queue.remove());
-                            int test = (0x00000003 & unDecodedCW);
-                            do { // TODO refactor this DRY
-                                switch (test){
-                                    case 0:
-                                        playPause(lengthPauseBetweenWords);
-                                        break;
-                                    case 1:
-                                        playDotOrDash (lengthDot);
-                                        unDecodedCW >>>= 2;
-                                        test = (0x00000003 & unDecodedCW);
-                                        if (test == 0) {
-                                            playPause(lengthPauseBetweenCharacters);
-                                        } else {
-                                            playPause(lengthPauseBetweenDots);
-                                        }
-                                        Log.d(TAG, "Dot   .");
-                                        break;
-                                    case 3:
-                                        playDotOrDash (lengthDash);
-//                                        unDecodedCW = choosePause(unDecodedCW, 4);
-                                        unDecodedCW >>>= 4;
-                                        test = (0x00000003 & unDecodedCW);
-                                        if (test == 0) {
-                                            playPause(lengthPauseBetweenCharacters);
-                                        } else {
-                                            playPause(lengthPauseBetweenDots);
-                                        }
-                                        Log.d(TAG, "Dash  -");
-                                        break;
-                                }
-                            } while (test != 0);
-                        }
-                    }
-                } catch (Exception e) { }
-            }
-        }).start();
+        feedBufferThread = new FeedBufferThread();
+        feedBufferThread.start();
     }
 
     private int getUnDecodedCW(byte ch) {

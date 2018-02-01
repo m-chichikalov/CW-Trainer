@@ -13,18 +13,16 @@ import java.util.Random;
  */
 
 public class KochMethod {
-    Context context;
     private int lesson;
     Random rnd;
     char[][] exerciseArray;
 
     private String lessonsOrder = "KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X";
 
-    public KochMethod (Context context) {
-        this.context = context;
+    public KochMethod () {
 
         exerciseArray = new char[5][6]; //HARDCODE
-        this.lesson = 4; // HARDCODE
+        this.lesson = 6; // HARDCODE
         rnd = new Random();
 //        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
 //        lesson = sharedPref.getInt(asdfa afs  df, 0);
