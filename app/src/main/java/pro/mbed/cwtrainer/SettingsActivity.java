@@ -1,6 +1,9 @@
 package pro.mbed.cwtrainer;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
@@ -21,6 +24,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 //  Boolean free;
     EditTextPreference speed, call, pause;
     ListPreference ratio, frequency, lesson;
+
+    private Handler settingsUiHandler;
+
 
     public SettingsActivity() {
         super();
@@ -59,17 +65,17 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 double frequencyDouble = Double.parseDouble(frequency.getValue());
                 double pauseDouble = Double.parseDouble(pause.getText());
 
-                    Log.d(TAG, "Play sample");
-                    if (cw == null) {
-                        cw = new CwPlayer(speedInt, frequencyDouble, ratioDouble, pauseDouble);
-                    } else {
-                        cw.pause();
-                        cw.reInit(speedInt, frequencyDouble, ratioDouble, pauseDouble);
-                    }
-                    cw.cleanBuffer();
-                    cw.play();
-                    cw.feed((byte) ' ');
-                    cw.feed(call.getText());
+                Log.d(TAG, "Play sample");
+                if (cw == null) {
+                    cw = new CwPlayer(speedInt, frequencyDouble, ratioDouble, pauseDouble);
+                } else {
+                    cw.pause();
+                    cw.reInit(speedInt, frequencyDouble, ratioDouble, pauseDouble);
+                }
+                cw.cleanBuffer();
+                cw.play();
+                cw.feed((byte) ' ');
+                cw.feed(call.getText());
             }
         });
 
@@ -82,6 +88,23 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         bindChangeListener(frequency);
         bindChangeListener(lesson);
         bindChangeListener(pause);
+
+        settingsUiHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                switch (msg.what) {
+                    case CwPlayer.PLAY:
+                        break;
+                    case CwPlayer.STOP:
+                        break;
+                    case CwPlayer.PAUSE:
+                        break;
+                    default:
+                        super.handleMessage(msg);
+                }
+            }
+        };
+
     }
 
     private void bindChangeListener (Preference pref) {

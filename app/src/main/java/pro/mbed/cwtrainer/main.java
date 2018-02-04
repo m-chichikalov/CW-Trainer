@@ -3,6 +3,9 @@ package pro.mbed.cwtrainer;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.os.PersistableBundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
@@ -28,7 +31,8 @@ public class main extends AppCompatActivity implements View.OnClickListener{
     int speed, lesson;
 //  Noise noise;
 
-    String TAG = "mainActivity";
+    private static final String TAG = "mActCwTrainer";
+    static Handler mainHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +72,14 @@ public class main extends AppCompatActivity implements View.OnClickListener{
         btStart.setOnClickListener(this);
         btFeed = findViewById(R.id.button_feed);
         btFeed.setOnClickListener(this);
+
+        mainHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+            }
+        };
+
     }
 
     @Override
@@ -99,19 +111,26 @@ public class main extends AppCompatActivity implements View.OnClickListener{
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.button_start: {
-                km.generateExercise(cw);
+//                cw.play();
+//                km.generateExercise(cw);
                 break;
             }
-            case R.id.button_pause: {
-//              cw2.pause();
-                cw.cleanBuffer();
+            case R.id.button_pause:
+//                mainHandler.postDelayed(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        cw.play();
+//                        cw.feed("rv9yw");
+//                    }
+//                }, 1000);
+//              cw.pause();
+//                cw.cleanBuffer();
                 break;
-            }
             case R.id.button_feed: {
-                cw.play();
-                for (int i = 65; i < 91; i++) {
-                    cw.feed((byte) i);
-                }
+//                cw.play();
+//                for (int i = 65; i < 91; i++) {
+//                    cw.feed((byte) i);
+//                }
 //              cw.pause();
                 break;
             }

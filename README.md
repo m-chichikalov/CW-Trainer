@@ -36,5 +36,61 @@ Number 2 is base array, "pure" sine with choosen frequency, I used it to generat
 
 During that I fell into the trap. Dependently on the speed of Morse code and frequency of tone I could get terrible sound. After thinking over this, I figured it out that this happens because the length of array number 2 (in time domain) is not a multiple of period of frequency of tone. And sine looked like below.
 ![](https://s8.hostingkartinok.com/uploads/images/2018/01/97166490d773681608b999ebb4eeb884.png)
+
 How I fixed this you can see in code.
+
+### 3. Houston, we have a problem. (Jan 27, 2018).
+
+Eventually I found that I know not enough about concurrency in Android. I stuck trying to let uiActivity know that some thread is finished. One of my friends gave me very nice and helpful book "Efficient Android Threading, asynchronous processing techniques for Android applications." by Anders Goransson. 
+During this week I am going to read this book.
+
+### 4. Refactoring CwPlayer. (Febn 2, 2018).
+
+I have read a book which I mentioned before.
+This book has shed light on the problem. As a man who came from 'embedded word' I was wondering about stuff like mutex, semaphores, communication between Threads, data consistency in multy thread system, scheduling, and so on. I found handy realization AsynchThread, HandlerThread and other; learned about modificator 'synchronized' in Java, was surprised that Java has intrinsic methods of every object such as lock(), unlock(), wait() and notify().
+
+Ok, lets implement something that I have read.
+Now my CwPlayer looks like this ->
+''' java
+public class CwPlayer {
+    Queue<Byte> queue;
+
+
+
+    public void feed(byte charFeed) {
+        queue.add(charFeed);
+    }
+
+    public CwPlayer() {
+        queue = new LinkedList<>();
+        ....
+        startThread();
+    }
+
+    private class FeedBufferThread extends Thread {
+        @Override
+        public void run() {
+            try {
+                while (!isInterrupted()) {
+                    if (!queue.isEmpty()) {
+                            playCW();
+                        }
+                }
+            } catch ( Exception e) { e.printStackTrace(); }
+        }
+
+        private void playCW () {
+            // remove character from Queue, decode and feed audio buffer.
+        }
+    }
+
+
+    private void startThread() {
+        feedBufferThread = new FeedBufferThread();
+        feedBufferThread.start();
+    }
+}
+'''
+
+
 

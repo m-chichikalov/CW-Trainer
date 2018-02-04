@@ -4,6 +4,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.audiofx.Equalizer;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
@@ -13,6 +14,7 @@ import java.io.PipedWriter;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
+import java.util.concurrent.Callable;
 
 /**
  * Created by m.chichikalov@outlook.com
@@ -36,6 +38,10 @@ import java.util.Random;
  */
 
 public class CwPlayer {
+
+    static final int PLAY = 0;
+    static final int STOP = 1;
+    static final int PAUSE = 2;
 
     private final static int[] tableCW = {
             0x0000010, 0x0000000, 0x0045D5D, 0x0000000, // ' ', '!', '"', '#'
@@ -80,6 +86,11 @@ public class CwPlayer {
     Queue<Byte> queue;
     Random rnd;
 
+    private final Object pauseLock = new Object();
+    private volatile boolean paused = false;
+
+    Handler outerUiHandler;
+
     public CwPlayer(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {
 
         reInit(speedWPM, freqOfTone, dotDashRatio, lengthPause);
@@ -117,6 +128,11 @@ public class CwPlayer {
         generateMiddleSnd();
         generateEndSnd();
         generateSilentSnd();
+
+    }
+
+    public void setOuterUiHandler(Handler handler) {
+        this.outerUiHandler = handler;
     }
 
     private void genSinToneSamples() {
@@ -187,13 +203,18 @@ public class CwPlayer {
 
     public void play() {
         audioTrack.play();
+        if (feedBufferThread != null) {
+            synchronized (pauseLock) {
+                paused = false;
+                pauseLock.notify();
+            }
+        }
     }
 
 
     public void pause() {
-//        if (audioTrack.getPlayState() == audioTrack.PLAYSTATE_PLAYING) {
-            audioTrack.pause();
-//        }
+        audioTrack.pause();
+        paused = true;
     }
 
     public void close() {
@@ -202,7 +223,7 @@ public class CwPlayer {
         feedBufferThread.interrupt();
     }
 
-    public void feed(byte charFeed) {
+    synchronized public void feed(byte charFeed) {
         queue.add(charFeed);
     }
 
@@ -210,7 +231,7 @@ public class CwPlayer {
         // Todo implement
         char[] charsFeed = stringFeed.toCharArray();
         for (char chars: charsFeed) {
-            queue.add((byte) chars);
+            feed((byte) chars);
         }
     }
 
@@ -229,13 +250,22 @@ public class CwPlayer {
     private class FeedBufferThread extends Thread {
         @Override
         public void run() {
-            try {
-                while (!isInterrupted()) {
+            while (!isInterrupted()) {
+                synchronized (pauseLock){
                     if (!queue.isEmpty()) {
-                            playCW();
+                        if (paused) {
+                            try {
+                                pauseLock.wait();
+                            }
+                            catch (InterruptedException e) {
+                                e.printStackTrace();
+                                break;
+                            }
                         }
+                        playCW();
+                    }
                 }
-            } catch ( Exception e) { e.printStackTrace(); }
+            }
         }
 
         private void playCW () {
@@ -285,7 +315,7 @@ public class CwPlayer {
         if (ch >= 97 && ch <=122) {
             ch_ = (byte) (ch - 64);
         } else if (ch >= 32 && ch <= 90) {
-            Log.d(TAG, "Query int - " + tableCW[ch - 32] + "from table.");
+            Log.d(TAG, "Query int: " + (byte)tableCW[ch - 32] + " from table.");
             ch_ = (byte) (ch - 32);
         }
         Log.d(TAG, "Error recognize the character.");
