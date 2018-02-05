@@ -21,12 +21,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
     CwPlayer cw;
     Button bt;
-//  Boolean free;
     EditTextPreference speed, call, pause;
     ListPreference ratio, frequency, lesson;
 
     private Handler settingsUiHandler;
-
 
     public SettingsActivity() {
         super();
@@ -37,7 +35,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.xml.pref_general);
 
-        ActionBar actionBar = getSupportActionBar();
+        final ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             // Show the Up button in the action bar.
             actionBar.setDisplayHomeAsUpEnabled(true);
@@ -51,31 +49,30 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
         Log.d(TAG, "SettingsActivity was created, hash: " + this.hashCode());
 
-        cw = (CwPlayer) getLastNonConfigurationInstance();
 
         bt = new Button(this);
-        bt.setText("Play");
-        bt.setOnClickListener( new View.OnClickListener() {
+        bt.setText(R.string.bt_play_text);
 
+        bt.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (bt.getText().toString() == getString(R.string.bt_play_text)) {
+                    int speedInt = Integer.parseInt(speed.getText());
+                    double ratioDouble = Double.parseDouble(ratio.getValue());
+                    double frequencyDouble = Double.parseDouble(frequency.getValue());
+                    double pauseDouble = Double.parseDouble(pause.getText());
 
-                int speedInt = Integer.parseInt(speed.getText());
-                double ratioDouble = Double.parseDouble(ratio.getValue());
-                double frequencyDouble = Double.parseDouble(frequency.getValue());
-                double pauseDouble = Double.parseDouble(pause.getText());
-
-                Log.d(TAG, "Play sample");
-                if (cw == null) {
-                    cw = new CwPlayer(speedInt, frequencyDouble, ratioDouble, pauseDouble);
-                } else {
-                    cw.pause();
+                    Log.d(TAG, "Play sample");
                     cw.reInit(speedInt, frequencyDouble, ratioDouble, pauseDouble);
+
+                    cw.playString("rv9yw");
+                } else {
+                    if (cw != null) {
+                        cw.stop();
+                    }
+
                 }
-                cw.cleanBuffer();
-                cw.play();
-                cw.feed((byte) ' ');
-                cw.feed(call.getText());
+
             }
         });
 
@@ -94,8 +91,12 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             public void handleMessage(Message msg) {
                 switch (msg.what) {
                     case CwPlayer.PLAY:
+                        bt.setText(R.string.bt_stop_text);
+//                        actionBar.hide();
                         break;
                     case CwPlayer.STOP:
+                        bt.setText(R.string.bt_play_text);
+//                        actionBar.show();
                         break;
                     case CwPlayer.PAUSE:
                         break;
@@ -104,6 +105,12 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 }
             }
         };
+
+        cw = (CwPlayer) getLastNonConfigurationInstance();
+        if (cw == null) {
+            cw = new CwPlayer(30, 700, 3, 2);
+        }
+        cw.setOuterUiHandler(settingsUiHandler);
 
     }
 
@@ -132,8 +139,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                             case "speed_wpm":
                                 stringValue += " wpm.";
                                 break;
-//                            case "":
-//                                break;
                         }
                         pref.setSummary(stringValue);
                     } else {
@@ -147,6 +152,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
+                cw.close();
+
                 finish();
                 break;
         }
@@ -155,19 +162,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
     @Override
     protected void onPause() {
-        if (cw != null) {
-            cw.pause();
-        }
         super.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
         if (cw != null) {
-            cw.close();
-            cw = null;
+            cw.stop();
         }
-        super.onDestroy();
     }
 
     @Override

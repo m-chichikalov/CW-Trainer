@@ -50,10 +50,10 @@ public class KochMethod {
         for (int i=0; i < 5; i++) {
             for (int j=0; j < 5; j++) {
                 exerciseArray[i][j] = charactersArray[rnd.nextInt(lesson+1)];
-                cw.feed( (byte) exerciseArray[i][j]);
+//                cw.feed( (byte) exerciseArray[i][j]);
             }
             exerciseArray[i][5] = ' ';
-            cw.feed( (byte) ' ');
+//            cw.feed( (byte) ' ');
         }
     }
 

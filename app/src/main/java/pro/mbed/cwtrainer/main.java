@@ -101,6 +101,7 @@ public class main extends AppCompatActivity implements View.OnClickListener{
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             Intent i = new Intent(this, SettingsActivity.class);
+            cw.stop();
             startActivity(i);
             return true;
         }
@@ -111,7 +112,7 @@ public class main extends AppCompatActivity implements View.OnClickListener{
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.button_start: {
-//                cw.play();
+                cw.play();
 //                km.generateExercise(cw);
                 break;
             }
@@ -124,9 +125,11 @@ public class main extends AppCompatActivity implements View.OnClickListener{
 //                    }
 //                }, 1000);
 //              cw.pause();
+              cw.stop();
 //                cw.cleanBuffer();
                 break;
             case R.id.button_feed: {
+                cw.playString("abcdefghi");
 //                cw.play();
 //                for (int i = 65; i < 91; i++) {
 //                    cw.feed((byte) i);
