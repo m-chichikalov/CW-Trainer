@@ -3,12 +3,10 @@ package pro.mbed.cwtrainer;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
-import android.media.audiofx.Equalizer;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
-
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Random;
 
 /**
  * Created by m.chichikalov@outlook.com
@@ -33,6 +31,10 @@ import java.util.Random;
 
 public class CwPlayer {
 
+    static final int PLAY = 0;
+    static final int STOP = 1;
+    static final int PAUSE = 2;
+
     private final static int[] tableCW = {
             0x0000010, 0x0000000, 0x0045D5D, 0x0000000, // ' ', '!', '"', '#'
             0x00475D5, 0x0000000, 0x0000000, 0x045DDDD, // '$', '%', '&', "'"
@@ -52,9 +54,10 @@ public class CwPlayer {
 
     private static final String TAG = "CwPlayer.class"; // for logging
     private static final int sampleRate = 44100; //Hz
-    private static final int lengthPauseBetweenDots = 5;
-    private static final int lengthDot = 3;
+    private final int lengthPauseBetweenDots = 5;
+    private final int lengthDot = 3;
 
+    private Thread feedBufferThread;
 
     private double lengthOfDot; // 60 millesecond -> 20 wpm
     private double freqOfTon; // Hz
@@ -72,25 +75,25 @@ public class CwPlayer {
     private byte  silentSnd[];
 
     private AudioTrack audioTrack;
-    Queue<Byte> queue;
-    Random rnd;
+
+    private final Object pauseLock = new Object();
+    private volatile boolean paused = false;
+    private volatile boolean stoped = false;
+
+    private Handler outerUiHandler, mHandler;
+
 
     public CwPlayer(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {
 
         reInit(speedWPM, freqOfTone, dotDashRatio, lengthPause);
 
-        rnd = new Random();
-        queue = new LinkedList<>();
         audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
                 sampleRate, AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT, (2 * numSamples),
                 AudioTrack.MODE_STREAM);
-
-        startThread();
     }
 
     public void reInit(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {
-
         this.dotDashRatio = dotDashRatio;
         this.freqOfTon = freqOfTone;
         this.lengthOfDot = 1200/speedWPM;
@@ -100,7 +103,6 @@ public class CwPlayer {
 
         period = sampleRate / (int) freqOfTon;
         numSamples = (int) ((lengthOfDot / 5) * (sampleRate/ 1000));
-
         numberOfPeriods = numSamples / period;
         numSamples = period * numberOfPeriods;
 
@@ -115,6 +117,186 @@ public class CwPlayer {
         generateMiddleSnd();
         generateEndSnd();
         generateSilentSnd();
+
+        startThread();
+    }
+
+    public void setOuterUiHandler(Handler handler) {
+        this.outerUiHandler = handler;
+    }
+
+    public void play() {
+        if (feedBufferThread != null) {
+            synchronized (pauseLock) {
+                paused = false;
+                pauseLock.notify();
+            }
+        }
+    }
+
+    public void pause() {
+        paused = true;
+    }
+
+    public void close() {
+        //TODO close  - release resources
+        audioTrack.pause();
+        feedBufferThread.interrupt();
+//        Looper.myLooper().quit();
+
+        cleanBuffer();
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Looper.myLooper().quit();
+            }
+        });
+
+//        audioTrack.stop();
+
+    }
+
+    public void stop() {
+        cleanBuffer();
+        stoped = true;
+    }
+
+    public void cleanBuffer() {
+        audioTrack.flush();
+        mHandler.removeCallbacksAndMessages(null);
+    }
+
+    private void startThread() {
+        if (feedBufferThread == null) {
+            feedBufferThread = new Thread("PlayCwAudio") {
+                @Override
+                public void run() {
+                    Looper.prepare();
+                    mHandler = new Handler();
+                    Looper.loop();
+                }
+            };
+
+            feedBufferThread.start();
+        }
+    }
+
+    class PlayString implements Runnable {
+
+        private final String str;
+
+        public PlayString (String str){
+            this.str = str;
+        }
+
+        @Override
+        public void run() {
+            synchronized (pauseLock) {
+                audioTrack.play();
+                if (outerUiHandler != null) {
+                    // send message to ui that we START to play
+                    Message msg = outerUiHandler.obtainMessage(CwPlayer.PLAY);
+                    outerUiHandler.sendMessage(msg);
+                }
+                char[] charsFeed = str.toCharArray();
+                for (char chars : charsFeed) {
+                    if (paused) {
+                        try {
+                            pauseLock.wait();
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                            break;
+                            }
+                    }
+
+                    if(stoped) {
+                        break;
+                    }
+
+                    if(Thread.currentThread().isInterrupted()) {
+                        audioTrack.release();
+                        return;
+                    }
+
+                    playCW(getUnDecodedCW((byte) chars));
+                }
+                if (outerUiHandler != null) {
+                    // send message to ui that we STOP to play
+                    Message msg = outerUiHandler.obtainMessage(CwPlayer.STOP);
+                    outerUiHandler.sendMessage(msg);
+                }
+                if (audioTrack != null) {
+                    audioTrack.pause();
+                }
+            }
+        }
+    }
+
+
+    public void playString(String str) {
+        stoped = false;
+        PlayString playStr = new PlayString(str);
+        mHandler.post(playStr);
+    }
+
+    private void playCW (int letter) {
+        // remove character from Queue, decode and feed audio buffer.
+        int test = (0x00000003 & letter);
+        do { // TODO refactor this DRY
+            switch (test){
+                case 0:
+                    playPause(lengthPauseBetweenWords);
+                    break;
+                case 1:
+                    playDotOrDash (lengthDot);
+                    letter >>>= 2;
+                    test = (0x00000003 & letter);
+                    if (test == 0) {
+                        playPause(lengthPauseBetweenCharacters);
+                    } else {
+                        playPause(lengthPauseBetweenDots);
+                    }
+                    Log.d(TAG, "Dot   .");
+                    break;
+                case 3:
+                    playDotOrDash (lengthDash);
+                    letter >>>= 4;
+                    test = (0x00000003 & letter);
+                    if (test == 0) {
+                        playPause(lengthPauseBetweenCharacters);
+                    } else {
+                        playPause(lengthPauseBetweenDots);
+                    }
+                    Log.d(TAG, "Dash  -");
+                    break;
+            }
+        } while (test != 0);
+    }
+    private int getUnDecodedCW(byte ch) {
+        byte ch_ = 1;
+        if (ch >= 97 && ch <=122) {
+            ch_ = (byte) (ch - 64);
+        } else if (ch >= 32 && ch <= 90) {
+            Log.d(TAG, "Query int: " + (byte)tableCW[ch - 32] + " from table.");
+            ch_ = (byte) (ch - 32);
+        }
+        Log.d(TAG, "Error recognize the character.");
+        return tableCW[ch_];
+    }
+
+    private void playDotOrDash (int length){
+        audioTrack.write(frontSnd, 0, (numSamples * 2));
+        for (int i = 0; i < length; i++) {
+            audioTrack.write(middleSnd, 0, (numSamples * 2));
+        }
+        audioTrack.write(endSnd, 0, (numSamples * 2));
+    }
+
+    private void playPause (int pause){
+        for (int i = 0; i < pause; i++) {
+            audioTrack.write(silentSnd, 0, (numSamples * 2));
+        }
     }
 
     private void genSinToneSamples() {
@@ -180,118 +362,6 @@ public class CwPlayer {
             for (int j = 0; j < (2 * period); j++) {
                 silentSnd[idx++] = 0;
             }
-        }
-    }
-
-    public void play() {
-        audioTrack.play();
-    }
-
-
-    public void pause() {
-//        if (audioTrack.getPlayState() == audioTrack.PLAYSTATE_PLAYING) {
-            audioTrack.pause();
-//        }
-    }
-
-    public void close() {
-        //TODO close  - release resources
-    }
-
-    public void feed(byte charFeed) {
-        queue.add(charFeed);
-    }
-
-    public void feed(String stringFeed) {
-        // Todo implement
-        char[] charsFeed = stringFeed.toCharArray();
-        for (char chars: charsFeed) {
-            queue.add((byte) chars);
-        }
-    }
-
-    public void cleanBuffer() {
-//        pause();
-        queue.clear();
-        audioTrack.flush();
-//        play();
-    }
-
-    public boolean isBufferEmpty() {
-        // TODO implement
-        return true;
-    }
-
-
-    private void startThread() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    for (;;) {
-                        if (!queue.isEmpty()) {
-                            // remove character from Queue, decode and feed audio buffer.
-                            int unDecodedCW = getUnDecodedCW(queue.remove());
-                            int test = (0x00000003 & unDecodedCW);
-                            do { // TODO refactor this DRY
-                                switch (test){
-                                    case 0:
-                                        playPause(lengthPauseBetweenWords);
-                                        break;
-                                    case 1:
-                                        playDotOrDash (lengthDot);
-                                        unDecodedCW >>>= 2;
-                                        test = (0x00000003 & unDecodedCW);
-                                        if (test == 0) {
-                                            playPause(lengthPauseBetweenCharacters);
-                                        } else {
-                                            playPause(lengthPauseBetweenDots);
-                                        }
-                                        Log.d(TAG, "Dot   .");
-                                        break;
-                                    case 3:
-                                        playDotOrDash (lengthDash);
-//                                        unDecodedCW = choosePause(unDecodedCW, 4);
-                                        unDecodedCW >>>= 4;
-                                        test = (0x00000003 & unDecodedCW);
-                                        if (test == 0) {
-                                            playPause(lengthPauseBetweenCharacters);
-                                        } else {
-                                            playPause(lengthPauseBetweenDots);
-                                        }
-                                        Log.d(TAG, "Dash  -");
-                                        break;
-                                }
-                            } while (test != 0);
-                        }
-                    }
-                } catch (Exception e) { }
-            }
-        }).start();
-    }
-
-    private int getUnDecodedCW(byte ch) {
-        byte ch_ = 1;
-        if (ch >= 97 && ch <=122) {
-            ch_ = (byte) (ch - 64);
-        } else if (ch >= 32 && ch <= 90) {
-            Log.d(TAG, "Query int - " + tableCW[ch - 32] + "from table.");
-            ch_ = (byte) (ch - 32);
-        }
-        Log.d(TAG, "Error recognize the character.");
-        return tableCW[ch_];
-    }
-
-    private void playDotOrDash (int length){
-        audioTrack.write(frontSnd, 0, (numSamples * 2));
-        for (int i = 0; i < length; i++) {
-            audioTrack.write(middleSnd, 0, (numSamples * 2));
-        }
-        audioTrack.write(endSnd, 0, (numSamples * 2));
-    }
-
-    private void playPause (int pause){
-        for (int i = 0; i < pause; i++) {
-            audioTrack.write(silentSnd, 0, (numSamples * 2));
         }
     }
 
