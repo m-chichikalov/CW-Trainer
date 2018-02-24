@@ -102,4 +102,7 @@
     <string name="pref_pause_key">pause</string>
     <string name="pref_pause_default">1</string>
 
+    <string name="sample_string"><![CDATA[<p><font color="red">Title</font></p><br><p>Description here</p>]]></string>
+    <string name="title_activity_result">ResultActivity</string>
+
 </resources>

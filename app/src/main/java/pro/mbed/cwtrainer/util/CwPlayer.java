@@ -1,4 +1,4 @@
-package pro.mbed.cwtrainer;
+package pro.mbed.cwtrainer.util;
 
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -31,9 +31,9 @@ import android.util.Log;
 
 public class CwPlayer {
 
-    static final int PLAY = 0;
-    static final int STOP = 1;
-    static final int PAUSE = 2;
+    public static final int PLAY = 0;
+    public static final int STOP = 1;
+    public static final int PAUSE = 2;
 
     private final static int[] tableCW = {
             0x0000010, 0x0000000, 0x0045D5D, 0x0000000, // ' ', '!', '"', '#'
@@ -81,6 +81,10 @@ public class CwPlayer {
     private volatile boolean stoped = false;
 
     private Handler outerUiHandler, mHandler;
+
+    public CwPlayer () {
+        this(25,750.0,3.0,1.0);
+    }
 
 
     public CwPlayer(int speedWPM, double freqOfTone, double dotDashRatio, double lengthPause) {

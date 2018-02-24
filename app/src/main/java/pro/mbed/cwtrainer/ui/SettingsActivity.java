@@ -1,4 +1,4 @@
-package pro.mbed.cwtrainer;
+package pro.mbed.cwtrainer.ui;
 
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,11 +15,18 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
 
+import javax.inject.Inject;
+
+import pro.mbed.cwtrainer.App;
+import pro.mbed.cwtrainer.R;
+import pro.mbed.cwtrainer.ui.AppCompatPreferenceActivity;
+import pro.mbed.cwtrainer.util.CwPlayer;
+
 public class SettingsActivity extends AppCompatPreferenceActivity {
 
     private final String TAG = this.getClass().getSimpleName();
 
-    CwPlayer cw;
+    @Inject CwPlayer cw;
     Button bt;
     EditTextPreference speed, call, pause;
     ListPreference ratio, frequency, lesson;
@@ -35,11 +42,14 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.xml.pref_general);
 
+        App.getComponent().inject(this);
+
         final ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             // Show the Up button in the action bar.
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
+
         speed     = (EditTextPreference) findPreference(getString(R.string.pref_wpm_key));
         call      = (EditTextPreference) findPreference(getString(R.string.pref_call_key));
         pause     = (EditTextPreference) findPreference(getString(R.string.pref_pause_key));
@@ -64,7 +74,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
 
                     Log.d(TAG, "Play sample");
                     cw.reInit(speedInt, frequencyDouble, ratioDouble, pauseDouble);
-
+                    cw.play();
                     cw.playString("rv9yw");
                 } else {
                     if (cw != null) {
@@ -92,11 +102,9 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
                 switch (msg.what) {
                     case CwPlayer.PLAY:
                         bt.setText(R.string.bt_stop_text);
-//                        actionBar.hide();
                         break;
                     case CwPlayer.STOP:
                         bt.setText(R.string.bt_play_text);
-//                        actionBar.show();
                         break;
                     case CwPlayer.PAUSE:
                         break;
@@ -106,10 +114,6 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             }
         };
 
-        cw = (CwPlayer) getLastNonConfigurationInstance();
-        if (cw == null) {
-            cw = new CwPlayer(30, 700, 3, 2);
-        }
         cw.setOuterUiHandler(settingsUiHandler);
 
     }
@@ -152,7 +156,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
-                cw.close();
+                cw.stop();
 
                 finish();
                 break;
@@ -166,10 +170,5 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         if (cw != null) {
             cw.stop();
         }
-    }
-
-    @Override
-    public Object onRetainNonConfigurationInstance() {
-        return cw;
     }
 }

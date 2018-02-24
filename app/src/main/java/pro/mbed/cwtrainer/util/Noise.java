@@ -1,4 +1,4 @@
-package pro.mbed.cwtrainer;
+package pro.mbed.cwtrainer.util;
 
 import android.media.AudioFormat;
 import android.media.AudioManager;

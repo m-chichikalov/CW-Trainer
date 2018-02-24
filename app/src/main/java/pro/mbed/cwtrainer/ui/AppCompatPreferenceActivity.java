@@ -1,4 +1,4 @@
-package pro.mbed.cwtrainer;
+package pro.mbed.cwtrainer.ui;
 
 
         import android.content.res.Configuration;

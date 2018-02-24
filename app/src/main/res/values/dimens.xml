@@ -1,4 +1,7 @@
 <resources>
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="play_sample_bt_padding_left">25dp</dimen>
+
+
+    <dimen name="design_fab_image_size">36dp</dimen>
 </resources>
