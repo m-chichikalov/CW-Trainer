@@ -1,4 +1,7 @@
 # CW-Trainer
+--------- IN PROCESS ------------
+
+ 
 Android application for mastering CW skill. (for practices receiving morse code)
 
 ### 1. How I started that (Jan 18, 2018).
